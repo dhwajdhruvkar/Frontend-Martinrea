@@ -23,24 +23,24 @@ export default {
         ],
       },
       colors: {
-        // Foundry brand
+        // Martinrea brand
         brand: {
-          DEFAULT: '#1E6FE6',
-          50: '#EAF2FE',
-          100: '#D5E5FD',
-          200: '#ABCAFA',
-          300: '#82B0F8',
-          400: '#5895F5',
-          500: '#1E6FE6',
-          600: '#185BBF',
-          700: '#124793',
-          800: '#0C3268',
-          900: '#061E3D',
+          DEFAULT: '#003364',
+          50: '#E8EEF5',
+          100: '#C6D6E5',
+          200: '#93AECB',
+          300: '#5C82AC',
+          400: '#2E5C8A',
+          500: '#003364',
+          600: '#002A52',
+          700: '#00203F',
+          800: '#001830',
+          900: '#001020',
         },
         sidebar: {
           DEFAULT: '#0F1923',
           hover: '#1A2632',
-          active: '#1E6FE6',
+          active: '#2E5C8A',
           muted: '#8A95A6',
           border: '#1F2A36',
         },
@@ -106,7 +106,7 @@ export default {
         card: '0 1px 2px rgba(15, 25, 35, 0.04), 0 1px 3px rgba(15, 25, 35, 0.06)',
         elevated:
           '0 4px 12px rgba(15, 25, 35, 0.06), 0 2px 4px rgba(15, 25, 35, 0.04)',
-        focus: '0 0 0 3px rgba(30, 111, 230, 0.18)',
+        focus: '0 0 0 3px rgba(0, 51, 100, 0.18)',
       },
       keyframes: {
         'accordion-down': {

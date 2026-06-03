@@ -41,8 +41,8 @@ export function remove(key: string): void {
 }
 
 export const STORAGE_KEYS = {
-  authToken: 'foundry.auth.token',
-  authUser: 'foundry.auth.user',
-  invoiceRegistry: 'foundry.invoices.knownIds',
-  recentSearches: 'foundry.search.recent',
+  authToken: 'martinrea.auth.token',
+  authUser: 'martinrea.auth.user',
+  invoiceRegistry: 'martinrea.invoices.knownIds',
+  recentSearches: 'martinrea.search.recent',
 } as const;

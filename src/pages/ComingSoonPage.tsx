@@ -28,7 +28,7 @@ export default function ComingSoonPage({
           {heading}
         </h1>
         <p className="mt-1 text-sm text-ink-muted">
-          Part of the Foundry AP roadmap. Ships in a future Phase 1 milestone.
+          Part of the Martinrea roadmap. Ships in a future Phase 1 milestone.
         </p>
       </div>
 
@@ -46,7 +46,7 @@ export default function ComingSoonPage({
             </h2>
             <p className="text-[13.5px] leading-relaxed text-ink-muted">
               {description ??
-                `The ${heading} module will ship as part of the Foundry AP Phase 1 rollout. The data contract is locked, the design is in review, and the build is scheduled.`}
+                `The ${heading} module will ship as part of the Martinrea Phase 1 rollout. The data contract is locked, the design is in review, and the build is scheduled.`}
             </p>
           </div>
 

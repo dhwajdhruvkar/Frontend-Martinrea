@@ -1,5 +1,4 @@
 import { NavLink } from 'react-router-dom';
-import { Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { NAV_SECTIONS } from './nav-items';
 import { useAuth } from '@/auth/useAuth';
@@ -13,12 +12,16 @@ export function Sidebar() {
     <aside className="fixed inset-y-0 left-0 z-30 flex w-[220px] flex-col bg-sidebar text-white">
       {/* Brand */}
       <div className="flex h-16 items-center gap-2.5 border-b border-sidebar-border px-5">
-        <div className="flex h-8 w-8 items-center justify-center rounded-md bg-brand shadow-sm">
-          <Sparkles className="h-4 w-4 text-white" />
-        </div>
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-md bg-white p-1 shadow-sm ring-1 ring-black/5">
+          <img
+            src="/martinrea-logo.png"
+            alt="Martinrea"
+            className="h-full w-full object-contain"
+          />
+        </span>
         <div className="flex flex-col leading-tight">
           <span className="text-[15px] font-semibold tracking-tight">
-            Foundry AP
+            Martinrea
           </span>
           <span className="text-[10.5px] uppercase tracking-[0.13em] text-sidebar-muted">
             Automation Suite
@@ -43,7 +46,7 @@ export function Sidebar() {
                         'group flex items-center gap-2.5 rounded-md px-3 py-2 text-[13.5px] font-medium transition-colors',
                         'text-slate-200/85 hover:bg-sidebar-hover hover:text-white',
                         isActive &&
-                          'bg-brand text-white shadow-sm hover:bg-brand-600 hover:text-white',
+                          'bg-brand-400 text-white shadow-sm hover:bg-brand-300 hover:text-white',
                       )
                     }
                   >

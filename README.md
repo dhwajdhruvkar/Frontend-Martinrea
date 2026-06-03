@@ -1,6 +1,6 @@
-# Foundry AP — Frontend (Phase 1, Vertical Slice)
+# Martinrea — Frontend (Phase 1, Vertical Slice)
 
-Production-grade React SPA for the **Foundry AP — Accounts Payable Automation Suite**.
+Production-grade React SPA for the **Martinrea — Accounts Payable Automation Suite**.
 Connects to the existing NestJS backend at `http://localhost:3001/api`.
 
 This is the **vertical slice** delivery: complete polished Login → Dashboard → Invoice Processing flow with the full app shell, design system, data layer, and seed mechanism in place. Remaining sidebar pages (OCR Validation, Approval Workflow, Exceptions, Audit Logs, Admin, etc.) render a polished "Coming Soon" placeholder so the navigation is intact — they'll be implemented in subsequent passes.
@@ -13,7 +13,7 @@ This is the **vertical slice** delivery: complete polished Login → Dashboard �
 - **React Router v6** — client-side SPA routing
 - **TanStack Query v5** — every fetch and mutation
 - **Axios** — single instance with JWT request interceptor + global 401 handler
-- **Tailwind CSS** — utility-first, with Foundry brand tokens
+- **Tailwind CSS** — utility-first, with Martinrea brand tokens
 - **shadcn/ui-style primitives** — locally vendored (Button, Card, Input, Label, Dialog, Dropdown, Select, Tabs, Badge, Skeleton, Separator, Textarea, Tooltip, Toaster)
 - **Recharts** — pipeline bar chart on the dashboard
 - **React Hook Form + Zod** — every form (login, create invoice, reject reason)
@@ -90,7 +90,7 @@ The seed creates ~24 invoices and drives each through the lifecycle to land in a
 
 ### Cross-cutting
 
-- **Auth** — JWT stored in `localStorage` (key `foundry.auth.token`), attached automatically to every Axios call, 401 wipes token + redirects to `/login`, `/users/me` rehydration on page reload
+- **Auth** — JWT stored in `localStorage` (key `martinrea.auth.token`), attached automatically to every Axios call, 401 wipes token + redirects to `/login`, `/users/me` rehydration on page reload
 - **RBAC-aware UI** — Action buttons appear only when the role + status + current-approver match. Backend remains the source of truth for authorisation (e.g. Finance_Director-only generic transitions).
 - **State machine** — Lifecycle timeline, allowed-transitions hint, and action availability all derive from server data, never duplicate the rules
 - **Toasts** — Every mutation surfaces a success or extracted-API-error toast

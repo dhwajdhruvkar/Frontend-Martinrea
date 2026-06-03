@@ -201,7 +201,7 @@ export default function DashboardPage() {
                         tickLine={false}
                       />
                       <RechartsTooltip
-                        cursor={{ fill: 'rgba(30, 111, 230, 0.05)' }}
+                        cursor={{ fill: 'rgba(0, 51, 100, 0.05)' }}
                         contentStyle={{
                           borderRadius: 8,
                           border: '1px solid #E5E9F0',

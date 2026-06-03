@@ -12,7 +12,7 @@ export default function NotFoundPage() {
         Page not found
       </h1>
       <p className="mt-2 max-w-md text-sm text-ink-muted">
-        That URL doesn't exist in the Foundry AP workspace. Check the sidebar
+        That URL doesn't exist in the Martinrea workspace. Check the sidebar
         navigation or jump back to the dashboard.
       </p>
       <Button asChild className="mt-6">

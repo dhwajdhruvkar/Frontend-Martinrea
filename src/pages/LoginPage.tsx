@@ -4,7 +4,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { toast } from 'sonner';
-import { Eye, EyeOff, Loader2, Lock, Mail, Sparkles } from 'lucide-react';
+import { Eye, EyeOff, Loader2, Lock, Mail } from 'lucide-react';
 import { useAuth } from '@/auth/useAuth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -17,6 +17,12 @@ const schema = z.object({
 });
 type FormData = z.infer<typeof schema>;
 
+const DEMO_ACCOUNTS = [
+  { role: 'AP Clerk', email: 'clerk@martinrea.dev', password: 'Password123!' },
+  { role: 'Plant Manager', email: 'pm@martinrea.dev', password: 'Password123!' },
+  { role: 'Finance Director', email: 'fd@martinrea.dev', password: 'Password123!' },
+] as const;
+
 export default function LoginPage() {
   const { login, isAuthenticated } = useAuth();
   const navigate = useNavigate();
@@ -26,10 +32,12 @@ export default function LoginPage() {
     '/dashboard';
 
   const [showPassword, setShowPassword] = useState(false);
+  const [demoPending, setDemoPending] = useState<string | null>(null);
 
   const {
     register,
     handleSubmit,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<FormData>({
     resolver: zodResolver(schema),
@@ -40,15 +48,32 @@ export default function LoginPage() {
     return <Navigate to={from} replace />;
   }
 
+  const doLogin = async (email: string, password: string) => {
+    await login(email, password);
+    toast.success('Welcome back');
+    navigate(from, { replace: true });
+  };
+
   const onSubmit = handleSubmit(async (data) => {
     try {
-      await login(data.email, data.password);
-      toast.success('Welcome back');
-      navigate(from, { replace: true });
+      await doLogin(data.email, data.password);
     } catch (err) {
       toast.error(extractApiError(err, 'Login failed'));
     }
   });
+
+  const handleDemoLogin = async (account: (typeof DEMO_ACCOUNTS)[number]) => {
+    setValue('email', account.email);
+    setValue('password', account.password);
+    setDemoPending(account.role);
+    try {
+      await doLogin(account.email, account.password);
+    } catch (err) {
+      toast.error(extractApiError(err, 'Login failed'));
+    } finally {
+      setDemoPending(null);
+    }
+  };
 
   return (
     <div className="grid min-h-screen grid-cols-1 lg:grid-cols-[1fr_520px]">
@@ -58,12 +83,16 @@ export default function LoginPage() {
         <div className="pointer-events-none absolute -right-20 bottom-0 h-[360px] w-[360px] rounded-full bg-brand-600/20 blur-3xl" />
 
         <div className="relative flex items-center gap-2.5">
-          <div className="flex h-9 w-9 items-center justify-center rounded-md bg-brand">
-            <Sparkles className="h-4 w-4 text-white" />
-          </div>
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-md bg-white p-1 shadow-sm ring-1 ring-black/5">
+            <img
+              src="/martinrea-logo.png"
+              alt="Martinrea"
+              className="h-full w-full object-contain"
+            />
+          </span>
           <div className="flex flex-col leading-tight">
             <span className="text-base font-semibold tracking-tight">
-              Foundry AP
+              Martinrea
             </span>
             <span className="text-[10.5px] uppercase tracking-[0.16em] text-sidebar-muted">
               Automation Suite
@@ -97,18 +126,22 @@ export default function LoginPage() {
         </div>
 
         <div className="relative text-[12px] text-sidebar-muted">
-          © 2026 Foundry. Phase 1 — Workflow & Approvals.
+          © 2026 Martinrea. Phase 1 — Workflow & Approvals.
         </div>
       </div>
 
       {/* Right login form */}
       <div className="flex flex-col bg-white px-6 py-10 sm:px-10 lg:px-14">
         <div className="mb-10 flex items-center gap-2 lg:hidden">
-          <div className="flex h-8 w-8 items-center justify-center rounded-md bg-brand">
-            <Sparkles className="h-4 w-4 text-white" />
-          </div>
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-md bg-white p-1 ring-1 ring-black/5">
+            <img
+              src="/martinrea-logo.png"
+              alt="Martinrea"
+              className="h-full w-full object-contain"
+            />
+          </span>
           <span className="text-[15px] font-semibold tracking-tight">
-            Foundry AP
+            Martinrea
           </span>
         </div>
 
@@ -117,7 +150,7 @@ export default function LoginPage() {
             Sign in to your workspace
           </h2>
           <p className="mt-2 text-sm text-ink-muted">
-            Use your Foundry credentials to continue.
+            Use your Martinrea credentials to continue.
           </p>
 
           <form onSubmit={onSubmit} className="mt-8 grid gap-4">
@@ -200,10 +233,59 @@ export default function LoginPage() {
             </Button>
           </form>
 
+          {/* Demo accounts — seeded backend credentials for quick sign-in */}
+          <div className="mt-7">
+            <div className="flex items-center gap-3">
+              <span className="h-px flex-1 bg-line" />
+              <span className="text-[11px] font-medium uppercase tracking-[0.14em] text-ink-subtle">
+                Demo accounts
+              </span>
+              <span className="h-px flex-1 bg-line" />
+            </div>
+
+            <div className="mt-4 grid gap-2">
+              {DEMO_ACCOUNTS.map((account) => {
+                const pending = demoPending === account.role;
+                return (
+                  <button
+                    key={account.email}
+                    type="button"
+                    onClick={() => handleDemoLogin(account)}
+                    disabled={isSubmitting || demoPending !== null}
+                    className="group flex items-center justify-between rounded-md border border-line bg-white px-3.5 py-2.5 text-left transition hover:border-brand-200 hover:bg-brand-50 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    <span className="flex flex-col">
+                      <span className="text-[13px] font-medium text-ink">
+                        {account.role}
+                      </span>
+                      <span className="text-[11.5px] text-ink-muted">
+                        {account.email}
+                      </span>
+                    </span>
+                    {pending ? (
+                      <Loader2 className="h-4 w-4 animate-spin text-brand" />
+                    ) : (
+                      <span className="text-[11.5px] font-medium text-brand opacity-0 transition group-hover:opacity-100">
+                        Sign in →
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+
+            <p className="mt-3 text-center text-[11.5px] text-ink-muted">
+              Password for all accounts:{' '}
+              <code className="rounded bg-canvas px-1.5 py-0.5 font-mono text-[11px] text-ink">
+                Password123!
+              </code>
+            </p>
+          </div>
+
           <p className="mt-8 text-center text-[11.5px] text-ink-muted">
             Need access?{' '}
             <a
-              href="mailto:ap-platform@foundry.dev"
+              href="mailto:ap-platform@martinrea.com"
               className="font-medium text-brand hover:underline"
             >
               Contact your AP administrator
