@@ -249,7 +249,8 @@ export default function AuditLogsPage() {
                 {entries.length === 0 ? 'No audit events recorded yet.' : 'No events match your filters.'}
               </p>
             ) : (
-              <table className="w-full table-fixed border-collapse text-[13px]">
+              <div className="overflow-x-auto">
+              <table className="w-full min-w-[820px] border-collapse text-[13px] lg:min-w-0 lg:table-fixed">
                 <colgroup>
                   <col className="w-[136px]" />
                   <col className="w-[150px]" />
@@ -324,6 +325,7 @@ export default function AuditLogsPage() {
                   })}
                 </tbody>
               </table>
+              </div>
             )}
           </CardContent>
         </Card>

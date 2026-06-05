@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { ChevronRight, HelpCircle, Keyboard, Mail, UploadCloud } from 'lucide-react';
+import { ChevronRight, HelpCircle, Keyboard, Mail, Menu, UploadCloud } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -35,7 +35,7 @@ function useBreadcrumb(): string[] {
   }, [pathname]);
 }
 
-export function Topbar() {
+export function Topbar({ onMenuClick }: { onMenuClick?: () => void }) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const trail = useBreadcrumb();
@@ -61,7 +61,16 @@ export function Topbar() {
   }, [canCreate]);
 
   return (
-    <header className="sticky top-0 z-20 flex h-16 items-center gap-4 border-b border-line bg-white/95 px-6 backdrop-blur-sm">
+    <header className="sticky top-0 z-20 flex h-16 items-center gap-3 border-b border-line bg-white/95 px-4 backdrop-blur-sm sm:gap-4 sm:px-6">
+      <button
+        type="button"
+        onClick={onMenuClick}
+        className="-ml-1 rounded-md p-1.5 text-ink-muted hover:bg-slate-100 hover:text-ink lg:hidden"
+        aria-label="Open menu"
+      >
+        <Menu className="h-5 w-5" />
+      </button>
+
       {/* Breadcrumb */}
       <nav className="flex items-center gap-1.5 text-[13px] text-ink-muted">
         {trail.map((seg, i) => (
@@ -88,7 +97,7 @@ export function Topbar() {
         {canCreate && (
           <Button size="sm" onClick={() => setUploadOpen(true)} className="gap-1.5">
             <UploadCloud className="h-4 w-4" />
-            Upload Invoice
+            <span className="hidden sm:inline">Upload Invoice</span>
           </Button>
         )}
 

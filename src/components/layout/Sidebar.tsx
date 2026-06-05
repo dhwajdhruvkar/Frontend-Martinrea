@@ -1,16 +1,28 @@
 import { NavLink } from 'react-router-dom';
+import { X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { visibleSections } from './nav-items';
 import { useAuth } from '@/auth/useAuth';
 import { formatApprovalCap, profileFor } from '@/lib/permissions';
 
-export function Sidebar() {
+interface SidebarProps {
+  /** Mobile drawer open state. Ignored at lg+ where the sidebar is always shown. */
+  open?: boolean;
+  onClose?: () => void;
+}
+
+export function Sidebar({ open = false, onClose }: SidebarProps) {
   const { user } = useAuth();
   const profile = profileFor(user?.role);
   const sections = visibleSections(user?.role);
 
   return (
-    <aside className="fixed inset-y-0 left-0 z-30 flex w-[220px] flex-col bg-sidebar text-white">
+    <aside
+      className={cn(
+        'fixed inset-y-0 left-0 z-50 flex w-[220px] flex-col bg-sidebar text-white transition-transform duration-200 ease-out lg:z-30 lg:translate-x-0',
+        open ? 'translate-x-0 shadow-2xl' : '-translate-x-full',
+      )}
+    >
       {/* Brand */}
       <div className="flex h-16 items-center gap-2.5 border-b border-sidebar-border px-5">
         <span className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-md bg-white p-1 shadow-sm ring-1 ring-black/5">
@@ -28,6 +40,14 @@ export function Sidebar() {
             Automation Suite
           </span>
         </div>
+        <button
+          type="button"
+          onClick={onClose}
+          className="ml-auto rounded-md p-1 text-sidebar-muted hover:bg-sidebar-hover hover:text-white lg:hidden"
+          aria-label="Close menu"
+        >
+          <X className="h-5 w-5" />
+        </button>
       </div>
 
       {/* Nav */}
@@ -42,6 +62,7 @@ export function Sidebar() {
                 <li key={item.to}>
                   <NavLink
                     to={item.to}
+                    onClick={() => onClose?.()}
                     className={({ isActive }) =>
                       cn(
                         'group flex items-center gap-2.5 rounded-md px-3 py-2 text-[13.5px] font-medium transition-colors',

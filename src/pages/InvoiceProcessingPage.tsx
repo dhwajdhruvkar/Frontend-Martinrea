@@ -354,7 +354,7 @@ export default function InvoiceProcessingPage() {
             </CardContent>
           </Card>
 
-          <div className="flex items-center justify-between text-[12px] text-ink-muted">
+          <div className="flex flex-col gap-1 text-[12px] text-ink-muted sm:flex-row sm:items-center sm:justify-between">
             <p>
               Showing{' '}
               <span className="font-semibold text-ink">
