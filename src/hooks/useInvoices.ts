@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useSyncExternalStore } from 'react';
-import { useQueries, useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { AxiosError } from 'axios';
 import { invoicesApi } from '@/lib/api';
 import { queryKeys } from '@/lib/query-client';
@@ -66,71 +66,50 @@ export function useAllowedTransitions(id: string | undefined | null) {
 }
 
 /**
- * Fan-out fetch of every invoice currently in the registry, in parallel.
- * Returns the full list plus a pending flag and counts derived for UIs.
+ * Fetch every invoice from the backend list endpoint (`GET /invoices`).
  *
- * The derived `invoices` and `errors` arrays are memoised against the
- * underlying query state so consumers (e.g. `useMemo` in DashboardPage)
- * get stable references between renders.
+ * On success we also warm the per-id React Query cache and the client registry
+ * so opening an invoice detail page (or deep-linking) is instant and doesn't
+ * trigger a redundant `GET /invoices/:id`.
  */
 export function useInvoicesList() {
-  const ids = useKnownInvoiceIds();
+  const qc = useQueryClient();
 
-  const queries = useQueries({
-    queries: ids.map((id) => ({
-      queryKey: queryKeys.invoice(id),
-      queryFn: () => invoicesApi.get(id),
-      staleTime: 30_000,
-    })),
+  const query = useQuery({
+    queryKey: ['invoices', 'list'],
+    queryFn: invoicesApi.list,
+    staleTime: 30_000,
   });
 
-  const isLoading =
-    ids.length > 0 && queries.some((q) => q.isLoading || q.isPending);
-  const isFetching = queries.some((q) => q.isFetching);
-
-  // Auto-prune the registry of any ID whose fetch came back 404/410. This
-  // covers the case where the DB was wiped under us — without it, the page
-  // would forever show "couldn't load N invoices" for the stale IDs.
-  const goneIds = ids.filter((_, i) => isGoneError(queries[i]?.error));
+  // Warm individual caches + registry from the freshly-fetched collection.
   useEffect(() => {
-    if (goneIds.length > 0) invoiceRegistry.removeMany(goneIds);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [goneIds.join('|')]);
-
-  // Use stable signatures (joined ids + length) so memoised arrays only
-  // re-compute when the underlying data actually shifts.
-  const dataSignature = queries
-    .map((q) => (q.data ? q.data.updatedAt : ''))
-    .join('|');
-  const errorCount = queries.filter((q) => q.error && !isGoneError(q.error)).length;
+    if (!query.data || query.data.length === 0) return;
+    invoiceRegistry.addMany(query.data.map((i) => i.id));
+    for (const inv of query.data) {
+      qc.setQueryData(queryKeys.invoice(inv.id), inv);
+    }
+  }, [query.data, qc]);
 
   const invoices = useMemo<Invoice[]>(() => {
-    const list = queries
-      .map((q) => q.data)
-      .filter((i): i is Invoice => !!i);
+    const list = query.data ? [...query.data] : [];
     list.sort(
       (a, b) =>
         new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
     );
     return list;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [dataSignature]);
+  }, [query.data]);
 
   const errors = useMemo<Error[]>(
-    () =>
-      queries
-        .map((q) => q.error)
-        .filter((e): e is Error => e instanceof Error),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [errorCount],
+    () => (query.error instanceof Error ? [query.error] : []),
+    [query.error],
   );
 
   return {
     invoices,
-    ids,
-    isEmpty: ids.length === 0,
-    isLoading,
-    isFetching,
+    ids: invoices.map((i) => i.id),
+    isEmpty: !query.isLoading && !query.isError && invoices.length === 0,
+    isLoading: query.isLoading,
+    isFetching: query.isFetching,
     errors,
   };
 }

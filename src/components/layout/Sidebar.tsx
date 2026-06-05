@@ -1,12 +1,13 @@
 import { NavLink } from 'react-router-dom';
 import { cn } from '@/lib/utils';
-import { NAV_SECTIONS } from './nav-items';
+import { visibleSections } from './nav-items';
 import { useAuth } from '@/auth/useAuth';
 import { formatApprovalCap, profileFor } from '@/lib/permissions';
 
 export function Sidebar() {
   const { user } = useAuth();
   const profile = profileFor(user?.role);
+  const sections = visibleSections(user?.role);
 
   return (
     <aside className="fixed inset-y-0 left-0 z-30 flex w-[220px] flex-col bg-sidebar text-white">
@@ -31,7 +32,7 @@ export function Sidebar() {
 
       {/* Nav */}
       <nav className="flex-1 overflow-y-auto px-3 py-4">
-        {NAV_SECTIONS.map((section) => (
+        {sections.map((section) => (
           <div key={section.heading} className="mb-5">
             <h4 className="px-3 pb-2 text-[10.5px] font-semibold uppercase tracking-[0.13em] text-sidebar-muted">
               {section.heading}

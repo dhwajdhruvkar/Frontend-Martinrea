@@ -25,4 +25,5 @@ export const queryKeys = {
   invoiceTransitions: (id: string) =>
     ['invoices', id, 'allowed-transitions'] as const,
   invoiceList: (ids: string[]) => ['invoices', 'list', ids.join(',')] as const,
+  auditLogs: ['audit-logs'] as const,
 };

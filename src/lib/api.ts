@@ -86,6 +86,19 @@ export const authApi = {
 };
 
 export const invoicesApi = {
+  /**
+   * List every invoice. Tolerates either a bare array response or a wrapped
+   * envelope ({ data | invoices | items: Invoice[] }) so it works regardless
+   * of how the backend shapes the collection.
+   */
+  list: async (): Promise<Invoice[]> => {
+    const { data } = await api.get<
+      | Invoice[]
+      | { data?: Invoice[]; invoices?: Invoice[]; items?: Invoice[] }
+    >('/invoices');
+    if (Array.isArray(data)) return data;
+    return data?.data ?? data?.invoices ?? data?.items ?? [];
+  },
   get: async (id: string): Promise<Invoice> => {
     const { data } = await api.get<Invoice>(`/invoices/${id}`);
     return data;
@@ -139,5 +152,28 @@ export const escalationApi = {
   runNow: async (): Promise<unknown> => {
     const { data } = await api.post('/escalation/run-now');
     return data;
+  },
+};
+
+/** A single audit-log record. Shape is backend-defined, so kept open-ended. */
+export type AuditLogRecord = Record<string, unknown>;
+
+export const auditApi = {
+  /**
+   * Fetch the audit trail (`GET /audit-logs`). Tolerates a bare array or a
+   * wrapped envelope so it works regardless of the backend's response shape.
+   */
+  list: async (): Promise<AuditLogRecord[]> => {
+    const { data } = await api.get<
+      | AuditLogRecord[]
+      | {
+          data?: AuditLogRecord[];
+          logs?: AuditLogRecord[];
+          auditLogs?: AuditLogRecord[];
+          items?: AuditLogRecord[];
+        }
+    >('/audit-logs');
+    if (Array.isArray(data)) return data;
+    return data?.data ?? data?.logs ?? data?.auditLogs ?? data?.items ?? [];
   },
 };

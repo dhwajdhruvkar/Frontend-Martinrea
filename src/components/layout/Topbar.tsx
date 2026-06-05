@@ -11,7 +11,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { useAuth } from '@/auth/useAuth';
-import { NAV_SECTIONS } from './nav-items';
+import { NAV_SECTIONS, canAccessPath } from './nav-items';
 import { initials } from '@/lib/utils';
 import { CreateInvoiceModal } from '@/components/invoices/CreateInvoiceModal';
 import { RolePill } from '@/components/auth/RolePill';
@@ -167,9 +167,11 @@ export function Topbar() {
             <DropdownMenuItem onSelect={() => navigate('/dashboard')}>
               Go to Dashboard
             </DropdownMenuItem>
-            <DropdownMenuItem onSelect={() => navigate('/admin')}>
-              Admin Panel
-            </DropdownMenuItem>
+            {canAccessPath('/admin', user?.role) && (
+              <DropdownMenuItem onSelect={() => navigate('/admin')}>
+                Admin Panel
+              </DropdownMenuItem>
+            )}
             <DropdownMenuSeparator />
             <DropdownMenuItem
               onSelect={logout}

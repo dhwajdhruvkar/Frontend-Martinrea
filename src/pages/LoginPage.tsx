@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Navigate, useLocation, useNavigate } from 'react-router-dom';
+import { Navigate, useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -26,10 +26,6 @@ const DEMO_ACCOUNTS = [
 export default function LoginPage() {
   const { login, isAuthenticated } = useAuth();
   const navigate = useNavigate();
-  const location = useLocation();
-  const from =
-    (location.state as { from?: { pathname: string } } | null)?.from?.pathname ??
-    '/dashboard';
 
   const [showPassword, setShowPassword] = useState(false);
   const [demoPending, setDemoPending] = useState<string | null>(null);
@@ -45,13 +41,13 @@ export default function LoginPage() {
   });
 
   if (isAuthenticated) {
-    return <Navigate to={from} replace />;
+    return <Navigate to="/dashboard" replace />;
   }
 
   const doLogin = async (email: string, password: string) => {
     await login(email, password);
     toast.success('Welcome back');
-    navigate(from, { replace: true });
+    navigate('/dashboard', { replace: true });
   };
 
   const onSubmit = handleSubmit(async (data) => {
