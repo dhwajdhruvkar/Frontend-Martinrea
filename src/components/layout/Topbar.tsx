@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Bell, ChevronRight, HelpCircle, Plus, Search } from 'lucide-react';
+import { ChevronRight, HelpCircle, Keyboard, Mail, UploadCloud } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -13,7 +13,9 @@ import {
 import { useAuth } from '@/auth/useAuth';
 import { NAV_SECTIONS, canAccessPath } from './nav-items';
 import { initials } from '@/lib/utils';
-import { CreateInvoiceModal } from '@/components/invoices/CreateInvoiceModal';
+import { UploadInvoiceModal } from '@/components/invoices/UploadInvoiceModal';
+import { GlobalSearch } from './GlobalSearch';
+import { NotificationsMenu } from './NotificationsMenu';
 import { RolePill } from '@/components/auth/RolePill';
 import { profileFor } from '@/lib/permissions';
 
@@ -37,21 +39,21 @@ export function Topbar() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const trail = useBreadcrumb();
-  const [createOpen, setCreateOpen] = useState(false);
+  const [uploadOpen, setUploadOpen] = useState(false);
 
   const profile = profileFor(user?.role);
   const canCreate = profile?.canCreate ?? false;
 
-  // ⌘K / Ctrl-K focuses the search box; ⌘N / Ctrl-N opens "New Invoice" if allowed.
+  // ⌘K / Ctrl-K focuses the search box; ⌘U / Ctrl-U opens "Upload Invoice" if allowed.
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
         e.preventDefault();
         document.getElementById('global-search')?.focus();
       }
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'n' && canCreate) {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'u' && canCreate) {
         e.preventDefault();
-        setCreateOpen(true);
+        setUploadOpen(true);
       }
     };
     window.addEventListener('keydown', handler);
@@ -79,42 +81,45 @@ export function Topbar() {
       </nav>
 
       {/* Search */}
-      <div className="relative ml-6 hidden flex-1 max-w-md md:block">
-        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-subtle" />
-        <input
-          id="global-search"
-          type="text"
-          placeholder="Search invoices, suppliers, POs…"
-          className="h-9 w-full rounded-md border border-line bg-canvas pl-9 pr-16 text-sm text-ink placeholder:text-ink-subtle focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand/15"
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') {
-              const q = (e.target as HTMLInputElement).value.trim();
-              if (q) navigate(`/invoices?q=${encodeURIComponent(q)}`);
-            }
-          }}
-        />
-        <kbd className="pointer-events-none absolute right-2 top-1/2 hidden -translate-y-1/2 select-none items-center gap-0.5 rounded border border-line bg-white px-1.5 py-0.5 font-mono text-[10px] font-medium text-ink-muted md:inline-flex">
-          ⌘K
-        </kbd>
-      </div>
+      <GlobalSearch />
 
       {/* Actions */}
       <div className="ml-auto flex items-center gap-2">
         {canCreate && (
-          <Button size="sm" onClick={() => setCreateOpen(true)} className="gap-1.5">
-            <Plus className="h-4 w-4" />
-            New Invoice
+          <Button size="sm" onClick={() => setUploadOpen(true)} className="gap-1.5">
+            <UploadCloud className="h-4 w-4" />
+            Upload Invoice
           </Button>
         )}
 
-        <Button variant="ghost" size="icon" aria-label="Help">
-          <HelpCircle className="h-[18px] w-[18px] text-ink-muted" />
-        </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon" aria-label="Help">
+              <HelpCircle className="h-[18px] w-[18px] text-ink-muted" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-64">
+            <DropdownMenuLabel className="flex items-center gap-2">
+              <Keyboard className="h-3.5 w-3.5" />
+              Keyboard shortcuts
+            </DropdownMenuLabel>
+            <div className="space-y-1.5 px-2 py-1.5 text-[12.5px] text-ink-muted">
+              <ShortcutRow label="Focus search" keys="⌘K" />
+              {canCreate && <ShortcutRow label="Upload invoice" keys="⌘U" />}
+            </div>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              onSelect={() =>
+                window.open('mailto:ap-platform@martinrea.com', '_blank')
+              }
+            >
+              <Mail className="h-4 w-4" />
+              Contact AP administrator
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
 
-        <Button variant="ghost" size="icon" aria-label="Notifications" className="relative">
-          <Bell className="h-[18px] w-[18px] text-ink-muted" />
-          <span className="absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full bg-red-500" />
-        </Button>
+        <NotificationsMenu />
 
         <div className="mx-1 h-7 w-px bg-line" />
 
@@ -184,8 +189,19 @@ export function Topbar() {
       </div>
 
       {canCreate && (
-        <CreateInvoiceModal open={createOpen} onOpenChange={setCreateOpen} />
+        <UploadInvoiceModal open={uploadOpen} onOpenChange={setUploadOpen} />
       )}
     </header>
+  );
+}
+
+function ShortcutRow({ label, keys }: { label: string; keys: string }) {
+  return (
+    <div className="flex items-center justify-between">
+      <span>{label}</span>
+      <kbd className="select-none rounded border border-line bg-white px-1.5 py-0.5 font-mono text-[10px] font-medium text-ink-muted">
+        {keys}
+      </kbd>
+    </div>
   );
 }
