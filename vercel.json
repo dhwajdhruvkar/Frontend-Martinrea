@@ -2,6 +2,10 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "rewrites": [
     {
+      "source": "/ocr-api/:path*",
+      "destination": "https://catalog-footing-hunger.ngrok-free.dev/api/:path*"
+    },
+    {
       "source": "/api/:path*",
       "destination": "https://bloating-plausibly-ardently.ngrok-free.dev/api/:path*"
     },

@@ -8,6 +8,7 @@ import {
   X,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { useQueryClient } from '@tanstack/react-query';
 import {
   Dialog,
   DialogContent,
@@ -20,9 +21,10 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import {
   ACCEPTED_UPLOAD_ACCEPT_ATTR,
-  uploadInvoiceFile,
   validateInvoiceFile,
-} from '@/lib/object-storage';
+} from '@/lib/upload-validation';
+import { extractOcrError, ocrApi } from '@/lib/ocr-api';
+import { ocrKeys } from '@/hooks/useOcr';
 
 type ItemStatus = 'ready' | 'invalid' | 'uploading' | 'done' | 'error';
 
@@ -40,9 +42,10 @@ function prettySize(bytes: number): string {
 }
 
 /**
- * Uploads invoice documents straight to object storage (Abhay's OCR pipeline
- * picks them up from the bucket). No field entry here — the extracted data is
- * reviewed later in the Document Viewer once OCR completes.
+ * Uploads invoice documents to the AI OCR service (POST /invoices/upload). The
+ * service runs OCR asynchronously and routes low-confidence results to the
+ * review queue, where the extracted data is validated in OCR Validation and
+ * the Document Viewer.
  */
 export function UploadInvoiceModal({
   open,
@@ -51,6 +54,7 @@ export function UploadInvoiceModal({
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
+  const qc = useQueryClient();
   const [items, setItems] = useState<UploadItem[]>([]);
   const [busy, setBusy] = useState(false);
   const [dragging, setDragging] = useState(false);
@@ -102,7 +106,7 @@ export function UploadInvoiceModal({
         prev.map((i) => (i.id === item.id ? { ...i, status: 'uploading', message: undefined } : i)),
       );
       try {
-        await uploadInvoiceFile(item.file);
+        await ocrApi.upload(item.file);
         ok += 1;
         setItems((prev) =>
           prev.map((i) => (i.id === item.id ? { ...i, status: 'done' } : i)),
@@ -112,7 +116,7 @@ export function UploadInvoiceModal({
         setItems((prev) =>
           prev.map((i) =>
             i.id === item.id
-              ? { ...i, status: 'error', message: err instanceof Error ? err.message : 'Upload failed' }
+              ? { ...i, status: 'error', message: extractOcrError(err, 'Upload failed') }
               : i,
           ),
         );
@@ -121,6 +125,8 @@ export function UploadInvoiceModal({
     setBusy(false);
 
     if (ok > 0) {
+      // New documents land in the OCR queues — refresh them.
+      qc.invalidateQueries({ queryKey: ocrKeys.all });
       toast.success(
         `${ok} document${ok === 1 ? '' : 's'} uploaded · queued for OCR` +
           (failed > 0 ? ` · ${failed} failed` : ''),

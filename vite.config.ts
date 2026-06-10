@@ -21,6 +21,10 @@ export default defineConfig(({ mode }) => {
   // server-only vars like API_PROXY_TARGET.
   const env = loadEnv(mode, process.cwd(), '');
   const proxyTarget = env.API_PROXY_TARGET ?? 'http://localhost:3001';
+  // OCR service (Aman). Its routes live under /api on the upstream, so the
+  // /ocr-api prefix is stripped and replaced with /api before forwarding.
+  const ocrProxyTarget =
+    env.OCR_API_PROXY_TARGET ?? 'https://catalog-footing-hunger.ngrok-free.dev';
 
   return {
     plugins: [react()],
@@ -40,6 +44,15 @@ export default defineConfig(({ mode }) => {
           headers: {
             // Skip ngrok-free's HTML interstitial that would otherwise replace
             // the JSON response on a first browser-flavoured request.
+            'ngrok-skip-browser-warning': '1',
+          },
+        },
+        '/ocr-api': {
+          target: ocrProxyTarget,
+          changeOrigin: true,
+          secure: true,
+          rewrite: (p) => p.replace(/^\/ocr-api/, '/api'),
+          headers: {
             'ngrok-skip-browser-warning': '1',
           },
         },
