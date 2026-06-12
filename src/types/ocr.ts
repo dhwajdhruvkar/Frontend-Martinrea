@@ -142,3 +142,80 @@ export interface Paginated<T> {
   limit: number;
   totalPages: number;
 }
+
+// ─── Extract → review → commit flow ─────────────────────────────────────────
+/**
+ * Result of `POST /ocr/invoices/extract` (or `/ocr/oci/extract`): the parsed
+ * fields, NOT yet persisted. The unified backend returns
+ * `{ stagingId, file: {...}, fields: ParsedInvoice }` — `stagingId` must be
+ * carried into the commit call. Kept tolerant via the index signature.
+ */
+export type OcrExtractResult = Partial<OcrInvoice> & {
+  stagingId?: string;
+  file?: {
+    originalFilename?: string;
+    mimeType?: string;
+    fileSize?: number;
+    [key: string]: unknown;
+  };
+  fields?: Record<string, unknown>;
+  [key: string]: unknown;
+};
+
+/** A line item in editable (string-bound) form for the review form inputs. */
+export interface OcrLineItemDraft {
+  description: string;
+  quantity: string;
+  unitPrice: string;
+  amount: string;
+}
+
+/**
+ * Flat, fully-controlled draft the review form binds to. All values are strings
+ * so inputs stay controlled; they're parsed back to typed values on commit.
+ */
+export interface OcrReviewDraft {
+  invoiceNumber: string;
+  supplier: string;
+  poNumber: string;
+  documentType: string;
+  currency: string;
+  totalAmount: string;
+  subtotal: string;
+  taxAmount: string;
+  invoiceDate: string;
+  dueDate: string;
+  lineItems: OcrLineItemDraft[];
+}
+
+/** One line item in the backend's `CommitInvoiceDto` shape. */
+export interface CommitLineItem {
+  description?: string | null;
+  quantity?: number | null;
+  unitPrice?: number | null;
+  lineTotal?: number | null;
+}
+
+/**
+ * Body sent to `POST /ocr/invoices/commit` — must match the backend's
+ * `CommitInvoiceDto` EXACTLY (it validates with `forbidNonWhitelisted`, so any
+ * extra key is rejected with a 400). `stagingId` comes from the extract step.
+ */
+export interface CommitPayload {
+  stagingId: string;
+  supplierName?: string | null;
+  invoiceNumber?: string | null;
+  /** ISO date (YYYY-MM-DD). */
+  invoiceDate?: string | null;
+  poNumber?: string | null;
+  currency?: string | null;
+  subtotal?: number | null;
+  taxAmount?: number | null;
+  totalAmount?: number | null;
+  /** 0–100. */
+  confidenceScore?: number | null;
+  documentType?: string;
+  language?: string | null;
+  cfdiDetected?: boolean;
+  lineItems?: CommitLineItem[];
+}

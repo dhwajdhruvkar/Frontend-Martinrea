@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { extractOcrError, ocrApi } from '@/lib/ocr-api';
-import type { OcrListParams } from '@/types/ocr';
+import type { CommitPayload, OcrListParams } from '@/types/ocr';
 
 export const ocrKeys = {
   all: ['ocr'] as const,
@@ -53,6 +53,37 @@ export function useUploadOcr() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ocrKeys.all });
     },
+  });
+}
+
+/**
+ * Synchronous OCR extraction (POST /invoices/extract). Returns extracted fields
+ * without persisting — the caller routes the user into the review form. No
+ * cache invalidation since nothing is saved yet.
+ */
+export function useExtractOcr() {
+  return useMutation({
+    mutationFn: (file: File) => ocrApi.extract(file),
+    onError: (err) => toast.error(extractOcrError(err, 'OCR extraction failed')),
+  });
+}
+
+/** Persist a human-verified invoice (POST /invoices/commit). */
+export function useCommitOcr() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: CommitPayload) => ocrApi.commit(payload),
+    onSuccess: (invoice) => {
+      qc.invalidateQueries({ queryKey: ocrKeys.all });
+      // The backend bridges the committed invoice into the approval workflow
+      // (PENDING_MATCH), so the workflow lists must refresh too.
+      qc.invalidateQueries({ queryKey: ['invoices'] });
+      if (invoice?.id) {
+        qc.setQueryData(ocrKeys.invoice(invoice.id), invoice);
+      }
+      toast.success('Invoice saved');
+    },
+    onError: (err) => toast.error(extractOcrError(err, 'Save failed')),
   });
 }
 

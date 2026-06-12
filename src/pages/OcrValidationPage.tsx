@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Loader2, RotateCw } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent } from '@/components/ui/card';
@@ -7,18 +8,16 @@ import { ocrKeys, useOcrReviewQueue } from '@/hooks/useOcr';
 import { OcrStatsStrip } from '@/components/ocr/OcrStatsStrip';
 import { OcrFilters, type OcrFilterValues } from '@/components/ocr/OcrFilters';
 import { OcrInvoiceTable } from '@/components/ocr/OcrInvoiceTable';
-import { OcrDetailDialog } from '@/components/ocr/OcrDetailDialog';
 import { Pagination } from '@/components/ocr/Pagination';
 import { OcrEmptyState, OcrErrorBanner } from '@/components/ocr/OcrStates';
-import type { OcrInvoice } from '@/types/ocr';
 
 const LIMIT = 25;
 
 export default function OcrValidationPage() {
   const qc = useQueryClient();
+  const navigate = useNavigate();
   const [filters, setFilters] = useState<OcrFilterValues>({});
   const [page, setPage] = useState(1);
-  const [selected, setSelected] = useState<OcrInvoice | null>(null);
 
   const params = { ...filters, page, limit: LIMIT };
   const { data, isLoading, isFetching, error, isError } = useOcrReviewQueue(params);
@@ -76,8 +75,7 @@ export default function OcrValidationPage() {
               <OcrInvoiceTable
                 invoices={invoices}
                 isLoading={isLoading}
-                selectedId={selected?.id}
-                onRowClick={setSelected}
+                onRowClick={(inv) => navigate(`/ocr/${inv.id}`)}
               />
             </CardContent>
           </Card>
@@ -95,13 +93,6 @@ export default function OcrValidationPage() {
           )}
         </>
       )}
-
-      <OcrDetailDialog
-        invoiceId={selected?.id ?? null}
-        fallback={selected}
-        open={!!selected}
-        onOpenChange={(open) => !open && setSelected(null)}
-      />
     </div>
   );
 }

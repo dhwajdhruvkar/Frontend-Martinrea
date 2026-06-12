@@ -1,41 +1,86 @@
+import { useEffect, useState } from 'react';
 import { Download, ExternalLink, FileText, Loader2, Lock, TriangleAlert } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useOcrFile } from '@/hooks/useOcr';
 import { isOcrAuthError } from '@/lib/ocr-api';
 
+type Resolved =
+  | { status: 'success'; url: string; contentType: string }
+  | { status: 'loading' }
+  | { status: 'error'; authError: boolean; message: string };
+
 export function OcrFilePreview({
   invoiceId,
   fileName,
+  localFile,
   enabled = true,
   className,
 }: {
-  invoiceId: string | null | undefined;
+  invoiceId?: string | null;
   fileName?: string | null;
+  /**
+   * Preview a not-yet-saved file directly from the browser (post-extract, before
+   * commit). When set, the server `/file` fetch is skipped.
+   */
+  localFile?: File | null;
   enabled?: boolean;
   className?: string;
 }) {
-  const file = useOcrFile(invoiceId, enabled);
+  // Server fetch — disabled while a local file is being previewed.
+  const fetched = useOcrFile(invoiceId, enabled && !localFile);
 
-  const downloadName = fileName || file.fileName || `invoice-${invoiceId ?? 'file'}`;
+  // Local object URL for the post-extract case.
+  const [localUrl, setLocalUrl] = useState<string | null>(null);
+  useEffect(() => {
+    if (!localFile) {
+      setLocalUrl(null);
+      return;
+    }
+    const url = URL.createObjectURL(localFile);
+    setLocalUrl(url);
+    return () => URL.revokeObjectURL(url);
+  }, [localFile]);
+
+  let resolved: Resolved;
+  let downloadName: string;
+  if (localFile) {
+    downloadName = fileName || localFile.name;
+    resolved = localUrl
+      ? { status: 'success', url: localUrl, contentType: localFile.type || '' }
+      : { status: 'loading' };
+  } else {
+    downloadName = fileName || fetched.fileName || `invoice-${invoiceId ?? 'file'}`;
+    if (fetched.status === 'success') {
+      resolved = { status: 'success', url: fetched.url, contentType: fetched.contentType };
+    } else if (fetched.status === 'error') {
+      resolved = {
+        status: 'error',
+        authError: isOcrAuthError(fetched.error),
+        message: fetched.error.message,
+      };
+    } else {
+      resolved = { status: 'loading' };
+    }
+  }
 
   let body: React.ReactNode;
-  if (file.status === 'success') {
-    if (isImage(file.contentType)) {
+  if (resolved.status === 'success') {
+    if (isImage(resolved.contentType)) {
       body = (
         <div className="absolute inset-0 overflow-auto bg-slate-800/5 p-3">
-          <img src={file.url} alt={downloadName} className="mx-auto max-w-full rounded shadow-sm" />
+          <img src={resolved.url} alt={downloadName} className="mx-auto max-w-full rounded shadow-sm" />
         </div>
       );
-    } else if (isPdf(file.contentType, downloadName)) {
+    } else if (isPdf(resolved.contentType, downloadName)) {
       body = (
-        <iframe title={downloadName} src={file.url} className="absolute inset-0 h-full w-full" />
+        <iframe title={downloadName} src={resolved.url} className="absolute inset-0 h-full w-full" />
       );
     } else {
-      body = <FilePreviewUnsupported url={file.url} name={downloadName} />;
+      body = <FilePreviewUnsupported url={resolved.url} name={downloadName} />;
     }
-  } else if (file.status === 'error') {
-    body = <FilePreviewError authError={isOcrAuthError(file.error)} message={file.error.message} />;
+  } else if (resolved.status === 'error') {
+    body = <FilePreviewError authError={resolved.authError} message={resolved.message} />;
   } else {
     body = (
       <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-ink-muted">
@@ -45,6 +90,9 @@ export function OcrFilePreview({
     );
   }
 
+  const showFileActions = resolved.status === 'success';
+  const fileUrl = resolved.status === 'success' ? resolved.url : '';
+
   return (
     <div className={cn('flex h-full flex-col overflow-hidden rounded-lg border border-line bg-canvas', className)}>
       <div className="flex items-center justify-between gap-2 border-b border-line bg-white px-3 py-2">
@@ -52,15 +100,15 @@ export function OcrFilePreview({
           <FileText className="h-3.5 w-3.5 shrink-0 text-ink-muted" />
           <span className="truncate">{downloadName}</span>
         </span>
-        {file.status === 'success' && (
+        {showFileActions && (
           <div className="flex shrink-0 items-center gap-1">
             <Button asChild variant="ghost" size="icon-sm" title="Open in new tab">
-              <a href={file.url} target="_blank" rel="noreferrer">
+              <a href={fileUrl} target="_blank" rel="noreferrer">
                 <ExternalLink className="h-3.5 w-3.5" />
               </a>
             </Button>
             <Button asChild variant="ghost" size="icon-sm" title="Download">
-              <a href={file.url} download={downloadName}>
+              <a href={fileUrl} download={downloadName}>
                 <Download className="h-3.5 w-3.5" />
               </a>
             </Button>

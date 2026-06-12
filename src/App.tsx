@@ -13,6 +13,7 @@ import DashboardPage from '@/pages/DashboardPage';
 import InvoiceProcessingPage from '@/pages/InvoiceProcessingPage';
 import InvoiceDetailPage from '@/pages/InvoiceDetailPage';
 import OcrValidationPage from '@/pages/OcrValidationPage';
+import OcrReviewPage from '@/pages/OcrReviewPage';
 import DocumentViewerPage from '@/pages/DocumentViewerPage';
 import MatchPage from '@/pages/MatchPage';
 import ApprovalsPage from '@/pages/ApprovalsPage';
@@ -46,8 +47,11 @@ export default function App() {
 
                     {/* Role-gated modules (visibility + access driven by nav-items roles) */}
                     <Route path="ocr" element={<OcrValidationPage />} />
+                    <Route path="ocr/new" element={<OcrReviewPage />} />
+                    <Route path="ocr/:id" element={<OcrReviewPage />} />
                     <Route path="documents" element={<DocumentViewerPage />} />
                     <Route path="match" element={<MatchPage />} />
+                    <Route path="match/:id" element={<MatchPage />} />
                     <Route path="approvals" element={<ApprovalsPage />} />
                     <Route path="exceptions" element={<ExceptionsPage />} />
                     <Route path="payments" element={<PaymentsPage />} />

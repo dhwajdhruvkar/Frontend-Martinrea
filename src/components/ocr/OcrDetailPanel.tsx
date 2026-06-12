@@ -16,14 +16,17 @@ import {
   OcrStatusBadge,
 } from '@/components/ocr/OcrBadges';
 import { OcrFilePreview } from '@/components/ocr/OcrFilePreview';
+import { OcrReviewForm } from '@/components/ocr/OcrReviewForm';
 import {
   displayValue,
+  flattenSource,
   getConfidence,
   getCreatedAt,
   getDocumentType,
   getErrorMessage,
   getExtractedFields,
   getFileName,
+  getFileSize,
   getInvoiceNumber,
   getLineItems,
   getMimeType,
@@ -34,37 +37,53 @@ import {
   humanizeKey,
   toNumber,
 } from '@/lib/ocr';
-import type { OcrInvoice } from '@/types/ocr';
+import type { OcrExtractResult, OcrInvoice } from '@/types/ocr';
 
 export function OcrDetailPanel({
   invoice,
+  editable = false,
+  localFile,
+  submitLabel,
+  onCommitted,
+  onCancel,
   className,
 }: {
-  invoice: OcrInvoice;
+  invoice: OcrInvoice | OcrExtractResult;
+  /** Render the editable review form instead of read-only extracted fields. */
+  editable?: boolean;
+  /** Preview a not-yet-saved local file (post-extract, before commit). */
+  localFile?: File | null;
+  submitLabel?: string;
+  onCommitted?: (saved: OcrInvoice) => void;
+  onCancel?: () => void;
   className?: string;
 }) {
+  // Flatten extract results ({ stagingId, file, fields }) so the header tiles
+  // and metadata read the parsed values the same way as a saved invoice.
+  const inv = flattenSource(invoice);
   const retry = useRetryOcr();
 
-  const invoiceNumber = getInvoiceNumber(invoice);
-  const supplier = getSupplier(invoice);
-  const confidence = getConfidence(invoice);
-  const total = getTotal(invoice);
-  const docType = getDocumentType(invoice);
-  const error = getErrorMessage(invoice);
-  const reviewReason = getReviewReason(invoice);
-  const fields = getExtractedFields(invoice);
-  const lineItems = getLineItems(invoice);
+  const invoiceNumber = getInvoiceNumber(inv);
+  const supplier = getSupplier(inv);
+  const confidence = getConfidence(inv);
+  const total = getTotal(inv);
+  const docType = getDocumentType(inv);
+  const error = getErrorMessage(inv);
+  const reviewReason = getReviewReason(inv);
+  const fields = getExtractedFields(inv);
+  const lineItems = getLineItems(inv);
   const fieldEntries = Object.entries(fields).filter(([k]) => k.toLowerCase() !== 'lineitems');
 
-  const isFailed = invoice.status === 'FAILED';
-  const isDuplicate = invoice.status === 'DUPLICATE_INVOICE';
+  const isFailed = inv.status === 'FAILED';
+  const isDuplicate = inv.status === 'DUPLICATE_INVOICE';
 
   return (
     <div className={cn('grid min-h-0 gap-4 lg:grid-cols-2', className)}>
       {/* Source document */}
       <OcrFilePreview
-        invoiceId={invoice.id}
-        fileName={getFileName(invoice)}
+        invoiceId={inv.id}
+        localFile={localFile}
+        fileName={getFileName(inv)}
         className="min-h-[360px] lg:min-h-0"
       />
 
@@ -74,9 +93,9 @@ export function OcrDetailPanel({
         <div>
           <div className="flex flex-wrap items-center gap-2">
             <h3 className="text-[17px] font-semibold tracking-tight text-ink">
-              {invoiceNumber || getFileName(invoice) || 'Untitled document'}
+              {invoiceNumber || getFileName(inv) || 'Untitled document'}
             </h3>
-            <OcrStatusBadge status={invoice.status} />
+            {inv.status && <OcrStatusBadge status={inv.status} />}
             {docType && <DocTypeBadge type={docType} />}
           </div>
           {supplier && <p className="mt-1 text-[13.5px] text-ink-muted">{supplier}</p>}
@@ -92,13 +111,13 @@ export function OcrDetailPanel({
               Total
             </p>
             <p className="mt-1 text-[18px] font-semibold tabular-nums text-ink">
-              {total !== null ? formatCurrency(total, getMimeishCurrency(invoice)) : '—'}
+              {total !== null ? formatCurrency(total, getMimeishCurrency(inv)) : '—'}
             </p>
           </div>
         </div>
 
         {/* Failure / duplicate callouts */}
-        {isFailed && (
+        {isFailed && inv.id && (
           <div className="flex items-start gap-2.5 rounded-md border border-rose-200 bg-rose-50 px-3 py-3">
             <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-rose-600" />
             <div className="flex-1">
@@ -108,7 +127,7 @@ export function OcrDetailPanel({
                 size="sm"
                 variant="destructive"
                 className="mt-2.5"
-                onClick={() => retry.mutate(invoice.id)}
+                onClick={() => retry.mutate(inv.id)}
                 disabled={retry.isPending}
               >
                 <RotateCw className={cn('h-3.5 w-3.5', retry.isPending && 'animate-spin')} />
@@ -122,7 +141,7 @@ export function OcrDetailPanel({
             <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
             <span>
               Flagged as a potential duplicate
-              {invoice.duplicateOfId ? ` of ${invoice.duplicateOfId}` : ''}.
+              {inv.duplicateOfId ? ` of ${inv.duplicateOfId}` : ''}.
             </span>
           </div>
         )}
@@ -133,6 +152,16 @@ export function OcrDetailPanel({
           </div>
         )}
 
+        {editable ? (
+          /* Editable review form (extract → correct → commit) */
+          <OcrReviewForm
+            source={invoice}
+            submitLabel={submitLabel}
+            onCommitted={onCommitted}
+            onCancel={onCancel}
+          />
+        ) : (
+          <>
         {/* Extracted fields */}
         <Section icon={ListTree} title="Extracted fields">
           {fieldEntries.length === 0 ? (
@@ -192,38 +221,42 @@ export function OcrDetailPanel({
         {/* Metadata */}
         <Section icon={Hash} title="Document metadata">
           <dl className="grid grid-cols-1 gap-x-6 gap-y-2.5 sm:grid-cols-2">
-            <Meta label="Document ID" value={invoice.id} mono />
-            <Meta label="File name" value={getFileName(invoice) ?? '—'} />
-            <Meta label="File type" value={getMimeType(invoice) ?? '—'} />
+            <Meta label="Document ID" value={inv.id ?? '—'} mono />
+            <Meta label="File name" value={getFileName(inv) ?? '—'} />
+            <Meta label="File type" value={getMimeType(inv) ?? '—'} />
             <Meta
               label="File size"
-              value={invoice.fileSize ? prettyBytes(Number(invoice.fileSize)) : '—'}
+              value={getFileSize(inv) !== null ? prettyBytes(getFileSize(inv)!) : '—'}
             />
             <Meta
               label="Created"
-              value={getCreatedAt(invoice) ? formatDateTime(getCreatedAt(invoice)) : '—'}
+              value={getCreatedAt(inv) ? formatDateTime(getCreatedAt(inv)) : '—'}
               icon={Calendar}
             />
             <Meta
               label="Last update"
-              value={getUpdatedAt(invoice) ? relativeFromNow(getUpdatedAt(invoice)) : '—'}
+              value={getUpdatedAt(inv) ? relativeFromNow(getUpdatedAt(inv)) : '—'}
               icon={Clock}
             />
           </dl>
         </Section>
 
         {/* Footer actions */}
-        <div className="flex items-center gap-2 border-t border-line pt-3">
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={() => retry.mutate(invoice.id)}
-            disabled={retry.isPending}
-          >
-            <RotateCw className={cn('h-3.5 w-3.5', retry.isPending && 'animate-spin')} />
-            Re-run OCR
-          </Button>
-        </div>
+        {inv.id && (
+          <div className="flex items-center gap-2 border-t border-line pt-3">
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => retry.mutate(inv.id)}
+              disabled={retry.isPending}
+            >
+              <RotateCw className={cn('h-3.5 w-3.5', retry.isPending && 'animate-spin')} />
+              Re-run OCR
+            </Button>
+          </div>
+        )}
+          </>
+        )}
       </div>
     </div>
   );

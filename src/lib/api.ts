@@ -89,13 +89,14 @@ export const invoicesApi = {
   /**
    * List every invoice. Tolerates either a bare array response or a wrapped
    * envelope ({ data | invoices | items: Invoice[] }) so it works regardless
-   * of how the backend shapes the collection.
+   * of how the backend shapes the collection. Requests the backend's maximum
+   * page size (200) so the list pages don't silently cut off at the default 20.
    */
   list: async (): Promise<Invoice[]> => {
     const { data } = await api.get<
       | Invoice[]
       | { data?: Invoice[]; invoices?: Invoice[]; items?: Invoice[] }
-    >('/invoices');
+    >('/invoices', { params: { limit: 200 } });
     if (Array.isArray(data)) return data;
     return data?.data ?? data?.invoices ?? data?.items ?? [];
   },

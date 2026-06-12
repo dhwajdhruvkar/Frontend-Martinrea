@@ -21,10 +21,19 @@ export default defineConfig(({ mode }) => {
   // server-only vars like API_PROXY_TARGET.
   const env = loadEnv(mode, process.cwd(), '');
   const proxyTarget = env.API_PROXY_TARGET ?? 'http://localhost:3001';
-  // OCR service (Aman). Its routes live under /api on the upstream, so the
-  // /ocr-api prefix is stripped and replaced with /api before forwarding.
-  const ocrProxyTarget =
-    env.OCR_API_PROXY_TARGET ?? 'https://catalog-footing-hunger.ngrok-free.dev';
+  // OCR routes live on the SAME unified backend under /api/ocr/*, so the
+  // /ocr-api prefix is rewritten to /api/ocr before forwarding. The target
+  // defaults to the main API target (one service hosts both route families).
+  const ocrProxyTarget = env.OCR_API_PROXY_TARGET ?? proxyTarget;
+  // OCI Object Storage bucket, reached through a Pre-Authenticated Request
+  // (PAR) URL. Proxying it keeps browser calls same-origin (no CORS) and keeps
+  // the PAR token out of the client bundle. The /oci-bucket prefix is replaced
+  // with the PAR's object path before forwarding.
+  const ociBucketTarget =
+    env.OCI_BUCKET_PROXY_TARGET ?? 'https://objectstorage.me-riyadh-1.oraclecloud.com';
+  const ociBucketParPath =
+    env.OCI_BUCKET_PAR_PATH ??
+    '/p/w5nk6CfntcPt3SWhfxwNk1i-Cwh0RZsRzl09EWnFUyX0OOo4Q_dYN-zRlK6u5Go7/n/bmuyboptp83n/b/netlink-poc-storage/o';
 
   return {
     plugins: [react()],
@@ -51,10 +60,16 @@ export default defineConfig(({ mode }) => {
           target: ocrProxyTarget,
           changeOrigin: true,
           secure: true,
-          rewrite: (p) => p.replace(/^\/ocr-api/, '/api'),
+          rewrite: (p) => p.replace(/^\/ocr-api/, '/api/ocr'),
           headers: {
             'ngrok-skip-browser-warning': '1',
           },
+        },
+        '/oci-bucket': {
+          target: ociBucketTarget,
+          changeOrigin: true,
+          secure: true,
+          rewrite: (p) => p.replace(/^\/oci-bucket/, ociBucketParPath),
         },
       },
     },

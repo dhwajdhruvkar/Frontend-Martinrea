@@ -14,6 +14,8 @@ import axios, { type InternalAxiosRequestConfig } from 'axios';
 import { STORAGE_KEYS, readJSON } from './storage';
 import { normalizePaginated } from './ocr';
 import type {
+  CommitPayload,
+  OcrExtractResult,
   OcrInvoice,
   OcrListParams,
   OcrStats,
@@ -119,10 +121,23 @@ function cleanParams(params: OcrListParams): Record<string, string | number> {
 
 export interface OcrUploadResult {
   id?: string;
+  invoiceId?: string;
   status?: string;
   fileName?: string;
   message?: string;
   [key: string]: unknown;
+}
+
+/**
+ * The unified backend wraps single-invoice responses as `{ success, invoice }`
+ * (no `data` key, so the envelope interceptor leaves them intact).
+ */
+function unwrapInvoice(data: unknown): OcrInvoice {
+  if (data && typeof data === 'object' && 'invoice' in (data as Record<string, unknown>)) {
+    const inner = (data as { invoice?: unknown }).invoice;
+    if (inner && typeof inner === 'object') return inner as OcrInvoice;
+  }
+  return data as OcrInvoice;
 }
 
 /** Resolved file download: the raw blob plus what the server said it is. */
@@ -141,6 +156,42 @@ function filenameFromDisposition(disposition: unknown): string | null {
 }
 
 export const ocrApi = {
+  /**
+   * POST /invoices/extract — multipart `file`. Synchronous OCR: returns
+   * `{ stagingId, file, fields }` WITHOUT persisting anything. The reviewer
+   * corrects the fields and then calls `commit` (with the stagingId) to save.
+   */
+  extract: async (file: File): Promise<OcrExtractResult> => {
+    const form = new FormData();
+    form.append('file', file, file.name);
+    const { data } = await ocrApiClient.post<OcrExtractResult>('/invoices/extract', form);
+    return data ?? {};
+  },
+
+  /**
+   * POST /oci/extract — run OCR on a file already in the OCI bucket (by object
+   * name). Returns extracted fields without persisting, same as `extract`.
+   */
+  extractOci: async (objectName: string): Promise<OcrExtractResult> => {
+    const { data } = await ocrApiClient.post<OcrExtractResult>('/oci/extract', {
+      objectName,
+    });
+    return data ?? {};
+  },
+
+  /**
+   * POST /invoices/commit — persist the human-verified fields for a staged
+   * extraction. Create-only on the backend. Returns the saved invoice
+   * (unwrapped from the `{ success, invoice }` envelope).
+   */
+  commit: async (payload: CommitPayload): Promise<OcrInvoice> => {
+    const { data } = await ocrApiClient.post<OcrInvoice | { invoice?: OcrInvoice }>(
+      '/invoices/commit',
+      payload,
+    );
+    return unwrapInvoice(data);
+  },
+
   /** POST /invoices/upload — multipart `file`. Async (202); body may be minimal. */
   upload: async (file: File): Promise<OcrUploadResult> => {
     const form = new FormData();
@@ -177,10 +228,12 @@ export const ocrApi = {
     });
   },
 
-  /** GET /invoices/{id} */
+  /** GET /invoices/{id} — unwraps the `{ success, invoice }` envelope. */
   get: async (id: string): Promise<OcrInvoice> => {
-    const { data } = await ocrApiClient.get<OcrInvoice>(`/invoices/${id}`);
-    return data;
+    const { data } = await ocrApiClient.get<OcrInvoice | { invoice?: OcrInvoice }>(
+      `/invoices/${id}`,
+    );
+    return unwrapInvoice(data);
   },
 
   /** POST /invoices/{id}/retry — re-run OCR. Async (202). */
